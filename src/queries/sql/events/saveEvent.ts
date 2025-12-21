@@ -1,8 +1,6 @@
-import clickhouse from '@/lib/clickhouse';
 import { EVENT_NAME_LENGTH, PAGE_TITLE_LENGTH, URL_LENGTH } from '@/lib/constants';
 import { uuid } from '@/lib/crypto';
-import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
-import kafka from '@/lib/kafka';
+import { PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
 import { saveEventData } from './saveEventData';
 import { saveRevenue } from './saveRevenue';
@@ -58,7 +56,6 @@ export interface SaveEventArgs {
 export async function saveEvent(args: SaveEventArgs) {
   return runQuery({
     [PRISMA]: () => relationalQuery(args),
-    [CLICKHOUSE]: () => clickhouseQuery(args),
   });
 }
 
@@ -147,103 +144,5 @@ async function relationalQuery({
         createdAt,
       });
     }
-  }
-}
-
-async function clickhouseQuery({
-  websiteId,
-  sessionId,
-  visitId,
-  eventType,
-  createdAt,
-  pageTitle,
-  hostname,
-  urlPath,
-  urlQuery,
-  referrerPath,
-  referrerQuery,
-  referrerDomain,
-  distinctId,
-  browser,
-  os,
-  device,
-  screen,
-  language,
-  country,
-  region,
-  city,
-  eventName,
-  eventData,
-  tag,
-  utmSource,
-  utmMedium,
-  utmCampaign,
-  utmContent,
-  utmTerm,
-  gclid,
-  fbclid,
-  msclkid,
-  ttclid,
-  lifatid,
-  twclid,
-}: SaveEventArgs) {
-  const { insert, getUTCString } = clickhouse;
-  const { sendMessage } = kafka;
-  const eventId = uuid();
-
-  const message = {
-    website_id: websiteId,
-    session_id: sessionId,
-    visit_id: visitId,
-    event_id: eventId,
-    country: country,
-    region: country && region ? (region.includes('-') ? region : `${country}-${region}`) : null,
-    city: city,
-    url_path: urlPath?.substring(0, URL_LENGTH),
-    url_query: urlQuery?.substring(0, URL_LENGTH),
-    utm_source: utmSource,
-    utm_medium: utmMedium,
-    utm_campaign: utmCampaign,
-    utm_content: utmContent,
-    utm_term: utmTerm,
-    referrer_path: referrerPath?.substring(0, URL_LENGTH),
-    referrer_query: referrerQuery?.substring(0, URL_LENGTH),
-    referrer_domain: referrerDomain?.substring(0, URL_LENGTH),
-    page_title: pageTitle?.substring(0, PAGE_TITLE_LENGTH),
-    gclid: gclid,
-    fbclid: fbclid,
-    msclkid: msclkid,
-    ttclid: ttclid,
-    li_fat_id: lifatid,
-    twclid: twclid,
-    event_type: eventType,
-    event_name: eventName ? eventName?.substring(0, EVENT_NAME_LENGTH) : null,
-    tag: tag,
-    distinct_id: distinctId,
-    created_at: getUTCString(createdAt),
-    browser,
-    os,
-    device,
-    screen,
-    language,
-    hostname,
-  };
-
-  if (kafka.enabled) {
-    await sendMessage('event', message);
-  } else {
-    await insert('website_event', [message]);
-  }
-
-  if (eventData) {
-    await saveEventData({
-      websiteId,
-      sessionId,
-      eventId,
-      urlPath: urlPath?.substring(0, URL_LENGTH),
-      eventName: eventName?.substring(0, EVENT_NAME_LENGTH),
-      eventData,
-      createdAt,
-    });
   }
 }

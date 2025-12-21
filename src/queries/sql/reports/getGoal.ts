@@ -1,6 +1,5 @@
-import clickhouse from '@/lib/clickhouse';
 import { EVENT_TYPE } from '@/lib/constants';
-import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
+import { PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
 import type { QueryFilters } from '@/lib/types';
 
@@ -18,7 +17,6 @@ export async function getGoal(
 ) {
   return runQuery({
     [PRISMA]: () => relationalQuery(...args),
-    [CLICKHOUSE]: () => clickhouseQuery(...args),
   });
 }
 
@@ -57,46 +55,6 @@ async function relationalQuery(
     ${joinSessionQuery}
     where website_event.website_id = {{websiteId::uuid}}
       and ${column} = {{value}}
-      ${dateQuery}
-      ${filterQuery}
-    `,
-    queryParams,
-  ).then(results => results?.[0]);
-}
-
-async function clickhouseQuery(
-  websiteId: string,
-  parameters: GoalParameters,
-  filters: QueryFilters,
-) {
-  const { startDate, endDate, type, value } = parameters;
-  const { rawQuery, parseFilters } = clickhouse;
-  const eventType = type === 'path' ? EVENT_TYPE.pageView : EVENT_TYPE.customEvent;
-  const column = type === 'path' ? 'url_path' : 'event_name';
-  const { filterQuery, dateQuery, cohortQuery, queryParams } = parseFilters({
-    ...filters,
-    websiteId,
-    value,
-    startDate,
-    endDate,
-    eventType,
-  });
-
-  return rawQuery(
-    `
-    select count(distinct session_id) as num,
-    (
-      select count(distinct session_id)
-      from website_event
-      ${cohortQuery}
-      where website_id = {websiteId:UUID}
-        ${dateQuery}
-        ${filterQuery}
-    ) as total
-    from website_event
-    ${cohortQuery}
-    where website_id = {websiteId:UUID}
-      and ${column} = {value:String}
       ${dateQuery}
       ${filterQuery}
     `,

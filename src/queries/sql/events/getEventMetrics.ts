@@ -1,6 +1,5 @@
-import clickhouse from '@/lib/clickhouse';
 import { EVENT_TYPE, FILTER_COLUMNS, SESSION_COLUMNS } from '@/lib/constants';
-import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
+import { PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
 import type { QueryFilters } from '@/lib/types';
 
@@ -23,7 +22,6 @@ export async function getEventMetrics(
 ): Promise<EventMetricData[]> {
   return runQuery({
     [PRISMA]: () => relationalQuery(...args),
-    [CLICKHOUSE]: () => clickhouseQuery(...args),
   });
 }
 
@@ -58,38 +56,6 @@ async function relationalQuery(
     order by 2 desc
     limit ${limit}
     offset ${offset}
-    `,
-    { ...queryParams, ...parameters },
-    FUNCTION_NAME,
-  );
-}
-
-async function clickhouseQuery(
-  websiteId: string,
-  parameters: EventMetricParameters,
-  filters: QueryFilters,
-): Promise<EventMetricData[]> {
-  const { type, limit = 500, offset = 0 } = parameters;
-  const column = FILTER_COLUMNS[type] || type;
-  const { rawQuery, parseFilters } = clickhouse;
-  const { filterQuery, cohortQuery, queryParams } = parseFilters({
-    ...filters,
-    websiteId,
-    eventType: EVENT_TYPE.customEvent,
-  });
-
-  return rawQuery(
-    `select ${column} x,
-            count(*) as y
-     from website_event
-      ${cohortQuery}
-     where website_id = {websiteId:UUID}
-        and created_at between {startDate:DateTime64} and {endDate:DateTime64}
-        ${filterQuery}
-     group by x
-     order by y desc
-         limit ${limit}
-     offset ${offset}
     `,
     { ...queryParams, ...parameters },
     FUNCTION_NAME,

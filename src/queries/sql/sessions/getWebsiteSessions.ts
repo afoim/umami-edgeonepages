@@ -1,6 +1,4 @@
-import clickhouse from '@/lib/clickhouse';
-import { EVENT_COLUMNS } from '@/lib/constants';
-import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
+import { PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
 import type { QueryFilters } from '@/lib/types';
 
@@ -9,7 +7,6 @@ const FUNCTION_NAME = 'getWebsiteSessions';
 export async function getWebsiteSessions(...args: [websiteId: string, filters: QueryFilters]) {
   return runQuery({
     [PRISMA]: () => relationalQuery(...args),
-    [CLICKHOUSE]: () => clickhouseQuery(...args),
   });
 }
 
@@ -74,83 +71,4 @@ async function relationalQuery(websiteId: string, filters: QueryFilters) {
     filters,
     FUNCTION_NAME,
   );
-}
-
-async function clickhouseQuery(websiteId: string, filters: QueryFilters) {
-  const { pagedRawQuery, parseFilters, getDateStringSQL } = clickhouse;
-  const { search } = filters;
-  const { filterQuery, dateQuery, cohortQuery, queryParams } = parseFilters({
-    ...filters,
-    websiteId,
-  });
-
-  const searchQuery = search
-    ? `and ((positionCaseInsensitive(distinct_id, {search:String}) > 0)
-           or (positionCaseInsensitive(city, {search:String}) > 0)
-           or (positionCaseInsensitive(browser, {search:String}) > 0)
-           or (positionCaseInsensitive(os, {search:String}) > 0)
-           or (positionCaseInsensitive(device, {search:String}) > 0))`
-    : '';
-
-  let sql = '';
-
-  if (EVENT_COLUMNS.some(item => Object.keys(filters).includes(item))) {
-    sql = `
-    select
-      session_id as id,
-      website_id as websiteId,
-      hostname,
-      browser,
-      os,
-      device,
-      screen,
-      language,
-      country,
-      region,
-      city,
-      ${getDateStringSQL('min(created_at)')} as firstAt,
-      ${getDateStringSQL('max(created_at)')} as lastAt,
-      uniq(visit_id) as visits,
-      sumIf(1, event_type = 1) as views,
-      lastAt as createdAt
-    from website_event
-    ${cohortQuery}
-    where website_id = {websiteId:UUID}
-    ${dateQuery}
-    ${filterQuery}
-    ${searchQuery}
-    group by session_id, website_id, hostname, browser, os, device, screen, language, country, region, city
-    order by lastAt desc
-    `;
-  } else {
-    sql = `
-    select
-      session_id as id,
-      website_id as websiteId,
-      arrayFirst(x -> 1, hostname) hostname,
-      browser,
-      os,
-      device,
-      screen,
-      language,
-      country,
-      region,
-      city,
-      ${getDateStringSQL('min(min_time)')} as firstAt,
-      ${getDateStringSQL('max(max_time)')} as lastAt,
-      uniq(visit_id) as visits,
-      sumIf(views, event_type = 1) as views,
-      lastAt as createdAt
-    from website_event_stats_hourly as website_event
-    ${cohortQuery}
-    where website_id = {websiteId:UUID}
-    ${dateQuery}
-    ${filterQuery}
-    ${searchQuery}
-    group by session_id, website_id, hostname, browser, os, device, screen, language, country, region, city
-    order by lastAt desc
-    `;
-  }
-
-  return pagedRawQuery(sql, queryParams, filters, FUNCTION_NAME);
 }

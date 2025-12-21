@@ -1,6 +1,5 @@
-import clickhouse from '@/lib/clickhouse';
 import { EVENT_TYPE, FILTER_COLUMNS, SESSION_COLUMNS } from '@/lib/constants';
-import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
+import { PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
 import type { QueryFilters } from '@/lib/types';
 
@@ -20,7 +19,6 @@ export async function getBreakdown(
 ) {
   return runQuery({
     [PRISMA]: () => relationalQuery(...args),
-    [CLICKHOUSE]: () => clickhouseQuery(...args),
   });
 }
 
@@ -69,54 +67,6 @@ async function relationalQuery(
         ${filterQuery}
       group by ${parseFieldsByName(fields)}, 
         website_event.session_id, website_event.visit_id
-    ) as t
-    group by ${parseFieldsByName(fields)}
-    order by 1 desc, 2 desc
-    limit 500
-    `,
-    queryParams,
-  );
-}
-
-async function clickhouseQuery(
-  websiteId: string,
-  parameters: BreakdownParameters,
-  filters: QueryFilters,
-): Promise<BreakdownData[]> {
-  const { parseFilters, rawQuery } = clickhouse;
-  const { startDate, endDate, fields } = parameters;
-  const { filterQuery, cohortQuery, queryParams } = parseFilters({
-    ...filters,
-    websiteId,
-    startDate,
-    endDate,
-    eventType: EVENT_TYPE.pageView,
-  });
-
-  return rawQuery(
-    `
-    select
-      sum(t.c) as "views",
-      count(distinct t.session_id) as "visitors",
-      count(distinct t.visit_id) as "visits",
-      sum(if(t.c = 1, 1, 0)) as "bounces",
-      sum(max_time-min_time) as "totaltime",
-      ${parseFieldsByName(fields)}
-    from (
-      select
-        ${parseFields(fields)},
-        session_id,
-        visit_id,
-        count(*) c,
-        min(created_at) min_time,
-        max(created_at) max_time
-      from website_event
-      ${cohortQuery}
-      where website_id = {websiteId:UUID}
-        and created_at between {startDate:DateTime64} and {endDate:DateTime64}
-        ${filterQuery}
-      group by ${parseFieldsByName(fields)}, 
-        session_id, visit_id
     ) as t
     group by ${parseFieldsByName(fields)}
     order by 1 desc, 2 desc
