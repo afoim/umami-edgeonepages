@@ -67,6 +67,5 @@ export * from './useNavigation';
 export * from './usePagedQuery';
 export * from './usePageParameters';
 export * from './useRegionNames';
-export * from './useSlug';
 export * from './useSticky';
 export * from './useTimezone';
