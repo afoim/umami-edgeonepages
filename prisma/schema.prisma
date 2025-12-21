@@ -23,8 +23,6 @@ model User {
 
   websites  Website[]  @relation("user")
   createdBy Website[]  @relation("createUser")
-  links     Link[]     @relation("user")
-  pixels    Pixel[]    @relation("user")
   reports   Report[]
 
   @@map("user")
@@ -236,39 +234,4 @@ model Revenue {
   @@index([websiteId, createdAt])
   @@index([websiteId, sessionId, createdAt])
   @@map("revenue")
-}
-
-model Link {
-  id        String    @id() @unique() @map("link_id") @db.Uuid
-  name      String    @db.VarChar(100)
-  url       String    @db.VarChar(500)
-  slug      String    @unique() @db.VarChar(100)
-  userId    String?   @map("user_id") @db.Uuid
-  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
-
-  user User? @relation("user", fields: [userId], references: [id])
-
-  @@index([slug])
-  @@index([userId])
-  @@index([createdAt])
-  @@map("link")
-}
-
-model Pixel {
-  id        String    @id() @unique() @map("pixel_id") @db.Uuid
-  name      String    @db.VarChar(100)
-  slug      String    @unique() @db.VarChar(100)
-  userId    String?   @map("user_id") @db.Uuid
-  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
-
-  user User? @relation("user", fields: [userId], references: [id])
-
-  @@index([slug])
-  @@index([userId])
-  @@index([createdAt])
-  @@map("pixel")
 }
