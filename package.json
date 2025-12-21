@@ -64,6 +64,7 @@
     "@date-fns/utc": "^1.2.0",
     "@dicebear/collection": "^9.2.4",
     "@dicebear/core": "^9.2.4",
+    "@fontsource/inter": "^5.2.8",
     "@hello-pangea/dnd": "^17.0.0",
     "@prisma/adapter-pg": "^6.19.1",
     "@prisma/client": "^6.19.1",
