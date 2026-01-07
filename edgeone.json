@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/settings",
+      "destination": "/settings/preferences",
+      "statusCode": 302
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin/users",
+      "statusCode": 302
+    }
+  ]
+}
