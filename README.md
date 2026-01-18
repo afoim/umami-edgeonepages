@@ -108,7 +108,7 @@ curl -X POST "https://your-site.edgeone.cool/api/debug-poc" \
 1.  确保在读取 Body（如用于 Base64 解码）后，创建一个新的 Buffer/Stream 传递给 Next.js。
 2.  或者，确保使用 `stream.tee()` 来保留流的可读性。
 
-### POC
+### POC 测试并获取详细调试信息（针对当前仓库最新提交）
 ```curl
 curl -X POST "https://eo-umami.acofork.com/api/debug-poc" \
      -H "Content-Type: application/json" \
