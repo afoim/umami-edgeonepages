@@ -45,9 +45,21 @@ export async function parseRequest(
 
 export async function getJsonBody(request: Request) {
   try {
+    if (request.headers.get('content-type') === 'application/json') {
+      return await request.json();
+    }
+  } catch {
+    // Ignore
+  }
+
+  try {
     return await request.clone().json();
   } catch {
-    return undefined;
+    try {
+      return await request.json();
+    } catch {
+      return undefined;
+    }
   }
 }
 
