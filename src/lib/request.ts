@@ -21,7 +21,14 @@ export async function parseRequest(
 
   if (schema) {
     const isGet = request.method === 'GET';
-    const result = schema.safeParse(isGet ? query : body);
+    // EdgeOne workaround: Try to read body from query if body is empty for POST
+    let data = isGet ? query : body;
+
+    if (!isGet && !body && Object.keys(query).length > 0) {
+      data = query;
+    }
+
+    const result = schema.safeParse(data);
 
     if (!result.success) {
       error = () => badRequest(z.treeifyError(result.error));

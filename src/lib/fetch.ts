@@ -50,6 +50,25 @@ export async function httpDelete(path: string, params: object = {}, headers: obj
 }
 
 export async function httpPost(path: string, params: object = {}, headers: object = {}) {
+  // EdgeOne workaround: Send payload as query params to avoid body stream issues
+  if (process.env.NEXT_PUBLIC_EDGE_COMPAT) {
+    const searchParams = new URLSearchParams();
+    // Flatten params to string for URLSearchParams
+    Object.entries(params).forEach(([key, value]) => {
+      if (typeof value === 'object') {
+        searchParams.append(key, JSON.stringify(value));
+      } else {
+        searchParams.append(key, String(value));
+      }
+    });
+
+    // Append query params to URL
+    const separator = path.includes('?') ? '&' : '?';
+    const urlWithParams = `${path}${separator}${searchParams.toString()}`;
+
+    return request('POST', urlWithParams, undefined, headers);
+  }
+
   return request('POST', path, JSON.stringify(params), headers);
 }
 
