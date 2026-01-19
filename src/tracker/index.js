@@ -160,14 +160,39 @@
     if (!payload) return;
 
     try {
-      const res = await fetch(endpoint, {
+      const body = { type, payload };
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (typeof cache !== 'undefined') {
+        headers['x-umami-cache'] = cache;
+      }
+
+      let url = endpoint;
+      const method = 'POST';
+      let bodyData = JSON.stringify(body);
+
+      // EdgeOne workaround: Send data as query params
+      const searchParams = new URLSearchParams();
+      Object.entries(body).forEach(([key, value]) => {
+        if (value !== undefined) {
+          if (typeof value === 'object') {
+            searchParams.append(key, JSON.stringify(value));
+          } else {
+            searchParams.append(key, String(value));
+          }
+        }
+      });
+      const separator = url.includes('?') ? '&' : '?';
+      url = `${url}${separator}${searchParams.toString()}`;
+      bodyData = undefined;
+
+      const res = await fetch(url, {
         keepalive: true,
-        method: 'POST',
-        body: JSON.stringify({ type, payload }),
-        headers: {
-          'Content-Type': 'application/json',
-          ...(typeof cache !== 'undefined' && { 'x-umami-cache': cache }),
-        },
+        method,
+        body: bodyData,
+        headers,
         credentials,
       });
 
