@@ -21,11 +21,23 @@ export async function parseRequest(
 
   if (schema) {
     const isGet = request.method === 'GET';
-    // EdgeOne workaround: Try to read body from query if body is empty for POST
+    // EdgeOne workaround: Try to read body from query if body is empty for POST/PUT
     let data = isGet ? query : body;
 
     if (!isGet && !body && Object.keys(query).length > 0) {
-      data = query;
+      data = { ...query };
+
+      // Try to parse JSON strings (e.g. for nested objects sent via query params)
+      for (const key in data) {
+        const val = data[key];
+        if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
+          try {
+            data[key] = JSON.parse(val);
+          } catch {
+            // Ignore
+          }
+        }
+      }
     }
 
     const result = schema.safeParse(data);

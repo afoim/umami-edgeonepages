@@ -50,15 +50,25 @@ export async function httpDelete(path: string, params: object = {}, headers: obj
 }
 
 export async function httpPost(path: string, params: object = {}, headers: object = {}) {
+  return httpSend('POST', path, params, headers);
+}
+
+export async function httpPut(path: string, params: object = {}, headers: object = {}) {
+  return httpSend('PUT', path, params, headers);
+}
+
+async function httpSend(method: string, path: string, params: object = {}, headers: object = {}) {
   // EdgeOne workaround: Send payload as query params to avoid body stream issues
   if (process.env.NEXT_PUBLIC_EDGE_COMPAT) {
     const searchParams = new URLSearchParams();
     // Flatten params to string for URLSearchParams
     Object.entries(params).forEach(([key, value]) => {
-      if (typeof value === 'object') {
-        searchParams.append(key, JSON.stringify(value));
-      } else {
-        searchParams.append(key, String(value));
+      if (value !== undefined) {
+        if (typeof value === 'object') {
+          searchParams.append(key, JSON.stringify(value));
+        } else {
+          searchParams.append(key, String(value));
+        }
       }
     });
 
@@ -66,12 +76,8 @@ export async function httpPost(path: string, params: object = {}, headers: objec
     const separator = path.includes('?') ? '&' : '?';
     const urlWithParams = `${path}${separator}${searchParams.toString()}`;
 
-    return request('POST', urlWithParams, undefined, headers);
+    return request(method, urlWithParams, undefined, headers);
   }
 
-  return request('POST', path, JSON.stringify(params), headers);
-}
-
-export async function httpPut(path: string, params: object = {}, headers: object = {}) {
-  return request('PUT', path, JSON.stringify(params), headers);
+  return request(method, path, JSON.stringify(params), headers);
 }
