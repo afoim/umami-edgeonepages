@@ -1,0 +1,11 @@
+.git
+docker-compose.yml
+Dockerfile
+.gitignore
+.DS_Store
+node_modules
+.idea
+.env
+.env.*
+scripts/seed
+scripts/seed-data.ts
